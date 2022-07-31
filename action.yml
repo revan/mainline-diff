@@ -55,8 +55,8 @@ runs:
     - name: "Add Diff Comment"
       run: |
         DIFF_CONTENTS="$(cat diff-output)"
-        [[ ! -z "\`\`\`\n$DIFF_CONTENTS\n\`\`\`" ]] && \
-        jq -nc "{\"body\": \"$DIFF_CONTENTS\"}" | \
+        [[ ! -z "$DIFF_CONTENTS" ]] && \
+        jq -nc "{\"body\": \"\`\`\`\n$DIFF_CONTENTS\n\`\`\`\"}" | \
         curl -sL  -X POST -d @- \
           -H "Content-Type: application/json" \
           -H "Authorization: token ${{ github.token }}" \
