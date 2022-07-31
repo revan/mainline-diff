@@ -54,7 +54,7 @@ runs:
 
     - name: "Add Diff Comment"
       run: |
-        DIFF_CONTENTS="$(cat test-diff.diff)"
+        DIFF_CONTENTS="$(cat diff-output)"
         [[ ! -z "$DIFF_CONTENTS" ]] || \
         jq -nc "{\"body\": \"DIFF_CONTENTS\"}" | \
         curl -sL  -X POST -d @- \
