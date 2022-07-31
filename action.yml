@@ -1,0 +1,54 @@
+name: 'Mainline Diff'
+description: 'Diff output of script on PR versus target branch.'
+inputs:
+  file-to-execute:
+    description: 'File to execute to produce data to diff'
+    required: true
+  files-to-clobber:
+    description: 'Files from this branch to overwrite on ancestor'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Checkout full repo"
+      uses: actions/checkout@v3
+#      with:
+#         fetch-depth: 0
+#        path: ""
+    # This PR ref is "$GITHUB_SHA", representing merge of PR into target.
+    # Target is ${{ github.event.pull_request.base.ref }}.
+    - name: "Run on this PR"
+      run: |
+        echo 'DIFF_PR_OUTPUT<<EOF' >> $GITHUB_ENV
+        "${{inputs.file-to-execute}}" | tee -a $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
+      shell: bash
+
+    - name : "Checkout target"
+      run: |
+        git fetch "${{ github.event.pull_request.base.ref }}"
+        git checkout "${{ github.event.pull_request.base.ref }}"
+      shell: bash
+
+#    - name: "Clobber files"  # TODO: in two parts? copy then write?
+#      run: 'echo "TODO: clobber"'
+#      shell: bash
+
+    - name: "Run on target"
+      run: |
+        echo 'DIFF_TARGET_OUTPUT<<EOF' >> $GITHUB_ENV
+        "${{inputs.file-to-execute}}" | tee -a $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
+      shell: bash
+
+    - name: "Diff outputs"
+      run: 'diff <(echo "$DIFF_PR_OUTPUT") <(echo "$DIFF_TARGET_OUTPUT") | tee diff-output || true'
+      shell: bash
+
+    - name: "Upload diff"
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: diff-output
+        path: diff-output

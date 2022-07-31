@@ -1,0 +1,15 @@
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  test_job:
+    runs-on: ubuntu-latest
+    name: Exercise action
+    steps:
+      - uses: actions/checkout@v3
+      - id: diff
+        uses: ./
+        with:
+           file-to-execute: ".github/workflows/test_script.sh"
+#          files-to-clobber: "test_script.sh"
