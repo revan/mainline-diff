@@ -14,8 +14,8 @@ runs:
   steps:
     - name: "Checkout full repo"
       uses: actions/checkout@v3
-#      with:
-#         fetch-depth: 0
+      with:
+         fetch-depth: 0
 #        path: ""
     # This PR ref is "$GITHUB_SHA", representing merge of PR into target.
     # Target is ${{ github.event.pull_request.base.ref }}.
@@ -28,7 +28,6 @@ runs:
 
     - name : "Checkout target"
       run: |
-        git fetch "${{ github.event.pull_request.base.ref }}"
         git checkout "${{ github.event.pull_request.base.ref }}"
       shell: bash
 
