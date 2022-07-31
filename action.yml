@@ -55,7 +55,7 @@ runs:
     - name: "Add Diff Comment"
       run: |
         DIFF_CONTENTS="$(cat diff-output)"
-        [[ ! -z "$DIFF_CONTENTS" ]] && \
+        [[ ! -z "\`\`\`\n$DIFF_CONTENTS\n\`\`\`" ]] && \
         jq -nc "{\"body\": \"$DIFF_CONTENTS\"}" | \
         curl -sL  -X POST -d @- \
           -H "Content-Type: application/json" \
