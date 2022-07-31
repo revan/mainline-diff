@@ -59,6 +59,6 @@ runs:
         jq -nc "{\"body\": \"DIFF_CONTENTS\"}" | \
         curl -sL  -X POST -d @- \
           -H "Content-Type: application/json" \
-          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Authorization: token ${{ github.token }}" \
           "${{ github.event.pull_request.comments_url }}"
       shell: bash
