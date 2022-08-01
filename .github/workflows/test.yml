@@ -11,5 +11,5 @@ jobs:
       - id: diff
         uses: ./
         with:
-           file-to-execute: ".github/workflows/test_script.sh"
-#          files-to-clobber: "test_script.sh"
+          file-to-execute: ".github/workflows/test_script.sh"
+          files-to-clobber: ".github/workflows/test_script.sh"

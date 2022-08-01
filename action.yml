@@ -16,7 +16,15 @@ runs:
       uses: actions/checkout@v3
       with:
          fetch-depth: 0
-#        path: ""
+
+    - name: "Backup clobbering files"
+      run: |
+        while IFS= read -r file; do
+          mkdir -p $(dirname "/tmp/diff-test-clobbering/${file}") 
+          cp "${file}" "/tmp/diff-test-clobbering/${file}" 
+        done <<< "${{ inputs.files-to-clobber }}"
+      shell: bash
+
     # This PR ref is "$GITHUB_SHA", representing merge of PR into target.
     # Target is ${{ github.event.pull_request.base.ref }}.
     - name: "Run on this PR"
@@ -31,9 +39,12 @@ runs:
         git checkout "${{ github.event.pull_request.base.ref }}"
       shell: bash
 
-#    - name: "Clobber files"  # TODO: in two parts? copy then write?
-#      run: 'echo "TODO: clobber"'
-#      shell: bash
+    - name: "Restore clobbering files"
+      run: |
+        while IFS= read -r file; do
+          cp "/tmp/diff-test-clobbering/${file}" "${file}" 
+        done <<< "${{ inputs.files-to-clobber }}"
+      shell: bash
 
     - name: "Run on target"
       run: |
