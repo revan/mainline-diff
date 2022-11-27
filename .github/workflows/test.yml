@@ -27,3 +27,17 @@ jobs:
           file-to-execute: ".github/workflows/test_image.sh"
           files-to-clobber: ".github/workflows/test_image.sh"
           file-to-image-diff: "/tmp/branch.png"
+
+  test_pdf:
+    runs-on: ubuntu-latest
+    name: Exercise action for PDF
+    steps:
+      - uses: actions/checkout@v3
+      - run: sudo apt install fonts-freefont-otf
+        shell: bash
+      - id: diff
+        uses: ./
+        with:
+          file-to-execute: ".github/workflows/test_pdf.sh"
+          files-to-clobber: ".github/workflows/test_pdf.sh"
+          file-to-pdf-diff: "/tmp/branch.pdf"
