@@ -3,13 +3,27 @@ on:
     types: [opened, reopened, synchronize]
 
 jobs:
-  test_job:
+  test_stdout:
     runs-on: ubuntu-latest
-    name: Exercise action
+    name: Exercise action for stdout
     steps:
       - uses: actions/checkout@v3
       - id: diff
         uses: ./
         with:
-          file-to-execute: ".github/workflows/test_script.sh"
-          files-to-clobber: ".github/workflows/test_script.sh"
+          file-to-execute: ".github/workflows/test_stdout.sh"
+          files-to-clobber: ".github/workflows/test_stdout.sh"
+
+  test_image:
+    runs-on: ubuntu-latest
+    name: Exercise action for image
+    steps:
+      - uses: actions/checkout@v3
+      - run: sudo apt install fonts-freefont-otf
+        shell: bash
+      - id: diff
+        uses: ./
+        with:
+          file-to-execute: ".github/workflows/test_image.sh"
+          files-to-clobber: ".github/workflows/test_image.sh"
+          file-to-image-diff: "/tmp/branch.png"
