@@ -8,6 +8,10 @@ inputs:
     description: 'Files from this branch to overwrite on ancestor'
     required: false
     default: ''
+  file-to-image-diff:
+    description: 'Filepath output from executing target containing an image to diff. If defined, supersedes stdout.'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -34,6 +38,18 @@ runs:
         echo 'EOF' >> $GITHUB_ENV
       shell: bash
 
+    - name: "Backup image output"
+      if: "${{ inputs.file-to-image-diff }}"
+      run: cp "${{ inputs.file-to-image-diff }}" /tmp/diff-test-image-pr
+      shell: bash
+
+    - name: "Upload image output"
+      if: "${{ inputs.file-to-image-diff }}"
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: pr-output
+        path: "${{ inputs.file-to-image-diff }}"
+
     - name : "Checkout target"
       run: |
         git checkout "${{ github.event.pull_request.base.ref }}"
@@ -53,21 +69,65 @@ runs:
         echo 'EOF' >> $GITHUB_ENV
       shell: bash
 
-    - name: "Diff outputs"
+    - name: "Upload image output"
+      if: "${{ inputs.file-to-image-diff }}"
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: target-output
+        path: "${{ inputs.file-to-image-diff }}"
+
+    - name: "Diff stdout outputs"
+      if: "${{ ! inputs.file-to-image-diff }}"
       run: 'diff <(echo "$DIFF_PR_OUTPUT") <(echo "$DIFF_TARGET_OUTPUT") | tee diff-output || true'
       shell: bash
 
-    - name: "Upload diff"
+    - name: "Upload stdout diff"
+      if: "${{ ! inputs.file-to-image-diff }}"
       uses: actions/upload-artifact@v1.0.0
       with:
         name: diff-output
         path: diff-output
 
-    - name: "Add Diff Comment"
+    - name: "Add stdout diff comment"
+      if: "${{ ! inputs.file-to-image-diff }}"
       run: |
         DIFF_CONTENTS="$(cat diff-output)"
         [[ ! -z "$DIFF_CONTENTS" ]] && \
         jq -nc "{\"body\": \"\`\`\`\n$DIFF_CONTENTS\n\`\`\`\"}" | \
+        curl -sL  -X POST -d @- \
+          -H "Content-Type: application/json" \
+          -H "Authorization: token ${{ github.token }}" \
+          "${{ github.event.pull_request.comments_url }}"
+      shell: bash
+
+    - name: "Diff image outputs"
+      if: "${{ inputs.file-to-image-diff }}"
+      run: |
+        compare /tmp/diff-test-image-pr "${{ inputs.file-to-image-diff }}" -subimage-search -dissimilarity-threshold 1 /tmp/diff-result.png || return_code=$?
+        # imagemagick requires first image to be larger. Just try both!
+        if [ "${return_code}" -eq 2]; then;
+          compare "${{ inputs.file-to-image-diff }}" /tmp/diff-test-image-pr -subimage-search -dissimilarity-threshold 1 /tmp/diff-result.png || return_code=$?
+        fi
+        echo "IMAGE_DIFF_STATUS=$return_code" >> $GITHUB_ENV
+      shell: bash
+  
+    - name: "Upload image diff"
+      if: "${{ inputs.file-to-image-diff }}"
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: diff-output
+        path: /tmp/diff-results-0.png
+
+    - name: "Add image diff comment"
+      if: "${{ ! inputs.file-to-image-diff }}"
+      run: |
+        if [ -z "$IMAGE_DIFF_STATS" ]; then
+          MESSAGE="No image diff."
+        else
+          MESSAGE="Image diff. See artifacts for file."          
+        fi
+
+        jq -nc "{\"body\": \"\`\`\`\n$MESSAGE\n\`\`\`\"}" | \
         curl -sL  -X POST -d @- \
           -H "Content-Type: application/json" \
           -H "Authorization: token ${{ github.token }}" \
