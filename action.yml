@@ -12,6 +12,10 @@ inputs:
     description: 'Filepath output from executing target containing an image to diff. If defined, supersedes stdout.'
     required: false
     default: ''
+  file-to-pdf-diff:
+    description: 'Filepath output from executing target containing a PDF to diff. If defined, supersedes stdout.'
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -62,6 +66,18 @@ runs:
         name: pr-output
         path: "${{ inputs.file-to-image-diff }}"
 
+    - name: "Backup pdf output"
+      if: "${{  inputs.file-to-pdf-diff }}"
+      run: cp "${{ inputs.file-to-pdf-diff }}" /tmp/diff-test-pdf-pr
+      shell: bash
+
+    - name: "Upload pdf output"
+      if: "${{ inputs.file-to-pdf-diff }}"
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: pr-output
+        path: "${{ inputs.file-to-pdf-diff }}"
+
     - name : "Checkout target"
       run: |
         git checkout "${{ github.event.pull_request.base.ref }}"
@@ -88,20 +104,27 @@ runs:
         name: target-output
         path: "${{ inputs.file-to-image-diff }}"
 
+    - name: "Upload pdf output"
+      if: "${{ inputs.file-to-pdf-diff }}"
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: target-output
+        path: "${{ inputs.file-to-pdf-diff }}"
+
     - name: "Diff stdout outputs"
-      if: "${{ ! inputs.file-to-image-diff }}"
+      if: "${{ ! inputs.file-to-image-diff && ! inputs.file-to-pdf-diff }}"
       run: 'diff <(echo "$DIFF_PR_OUTPUT") <(echo "$DIFF_TARGET_OUTPUT") | tee diff-output || true'
       shell: bash
 
     - name: "Upload stdout diff"
-      if: "${{ ! inputs.file-to-image-diff }}"
+      if: "${{ ! inputs.file-to-image-diff && ! inputs.file-to-pdf-diff }}"
       uses: actions/upload-artifact@v1.0.0
       with:
         name: diff-output
         path: diff-output
 
     - name: "Add stdout diff comment"
-      if: "${{ ! inputs.file-to-image-diff }}"
+      if: "${{ ! inputs.file-to-image-diff && ! inputs.file-to-pdf-diff }}"
       run: |
         DIFF_CONTENTS="$(cat diff-output)"
         [[ ! -z "$DIFF_CONTENTS" ]] && \
@@ -139,7 +162,43 @@ runs:
           MESSAGE="Image diff. See artifacts for file."          
         fi
 
-        jq -nc "{\"body\": \"\`\`\`\n$MESSAGE\n\`\`\`\"}" | \
+        jq -nc "{\"body\": \"$MESSAGE\"}" | \
+        curl -sL  -X POST -d @- \
+          -H "Content-Type: application/json" \
+          -H "Authorization: token ${{ github.token }}" \
+          "${{ github.event.pull_request.comments_url }}"
+      shell: bash
+
+    - name: "Diff pdf outputs"
+      if: "${{ inputs.file-to-pdf-diff }}"
+      run: |
+        convert -append /tmp/diff-test-pdf-pr /tmp/diff-test-pdf-pr.png
+        convert -append "${{ inputs.file-to-pdf-diff }}" /tmp/diff-test-pdf-target.png
+        compare /tmp/diff-test-pdf-pr.png /tmp/diff-test-pdf-target.png -subimage-search -dissimilarity-threshold 1 /tmp/diff-result-pdf.png || return_code=$?
+        # imagemagick requires first image to be larger. Just try both!
+        if [ "${return_code}" -eq 2 ]; then
+          compare /tmp/diff-test-pdf-target.png /tmp/diff-test-pdf-pr.png -subimage-search -dissimilarity-threshold 1 /tmp/diff-result-pdf.png || return_code=$?
+        fi
+        echo "PDF_DIFF_STATUS=$return_code" >> $GITHUB_ENV
+      shell: bash
+  
+    - name: "Upload pdf diff"
+      if: "${{ inputs.file-to-pdf-diff }}"
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: diff-output
+        path: /tmp/diff-result-pdf.png
+
+    - name: "Add pdf diff comment"
+      if: "${{ inputs.file-to-pdf-diff }}"
+      run: |
+        if [ "$PDF_DIFF_STATUS" -eq 0 ]; then
+          MESSAGE="No PDF diff."
+        else
+          MESSAGE="PDF diff. See artifacts for file."          
+        fi
+
+        jq -nc "{\"body\": \"$MESSAGE\"}" | \
         curl -sL  -X POST -d @- \
           -H "Content-Type: application/json" \
           -H "Authorization: token ${{ github.token }}" \
