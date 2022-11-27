@@ -19,6 +19,8 @@ jobs:
     name: Exercise action for image
     steps:
       - uses: actions/checkout@v3
+      - run: sudo apt install fonts-freefont-otf
+        shell: bash
       - id: diff
         uses: ./
         with:

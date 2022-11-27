@@ -21,6 +21,18 @@ runs:
       with:
          fetch-depth: 0
 
+    - name: Install ghostscript
+      run: sudo apt install ghostscript
+      shell: bash
+
+    - name: Change ImageMagick security policy
+      run: |
+        DQT='"' 
+        SRC="rights=${DQT}none${DQT} pattern=${DQT}PDF${DQT}"
+        RPL="rights=${DQT}read\|write${DQT} pattern=${DQT}PDF${DQT}"
+        sudo sed -i "s/$SRC/$RPL/" /etc/ImageMagick-6/policy.xml
+      shell: bash
+
     - name: "Backup clobbering files"
       run: |
         while IFS= read -r file; do
@@ -105,7 +117,7 @@ runs:
       run: |
         compare /tmp/diff-test-image-pr "${{ inputs.file-to-image-diff }}" -subimage-search -dissimilarity-threshold 1 /tmp/diff-result.png || return_code=$?
         # imagemagick requires first image to be larger. Just try both!
-        if [ "${return_code}" -eq 2]; then;
+        if [ "${return_code}" -eq 2 ]; then
           compare "${{ inputs.file-to-image-diff }}" /tmp/diff-test-image-pr -subimage-search -dissimilarity-threshold 1 /tmp/diff-result.png || return_code=$?
         fi
         echo "IMAGE_DIFF_STATUS=$return_code" >> $GITHUB_ENV
@@ -116,12 +128,12 @@ runs:
       uses: actions/upload-artifact@v1.0.0
       with:
         name: diff-output
-        path: /tmp/diff-results-0.png
+        path: /tmp/diff-result.png
 
     - name: "Add image diff comment"
-      if: "${{ ! inputs.file-to-image-diff }}"
+      if: "${{ inputs.file-to-image-diff }}"
       run: |
-        if [ -z "$IMAGE_DIFF_STATS" ]; then
+        if [ "$IMAGE_DIFF_STATUS" -eq 0 ]; then
           MESSAGE="No image diff."
         else
           MESSAGE="Image diff. See artifacts for file."          
