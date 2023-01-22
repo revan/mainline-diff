@@ -138,10 +138,12 @@ runs:
     - name: "Diff image outputs"
       if: "${{ inputs.file-to-image-diff }}"
       run: |
-        compare /tmp/diff-test-image-pr "${{ inputs.file-to-image-diff }}" -subimage-search -dissimilarity-threshold 1 /tmp/diff-result.png || return_code=$?
+        compare /tmp/diff-test-image-pr "${{ inputs.file-to-image-diff }}" -subimage-search -dissimilarity-threshold 1 /tmp/diff-result.png
+        return_code=$?
         # imagemagick requires first image to be larger. Just try both!
         if [ "${return_code}" -eq 2 ]; then
-          compare "${{ inputs.file-to-image-diff }}" /tmp/diff-test-image-pr -subimage-search -dissimilarity-threshold 1 /tmp/diff-result.png || return_code=$?
+          compare "${{ inputs.file-to-image-diff }}" /tmp/diff-test-image-pr -subimage-search -dissimilarity-threshold 1 /tmp/diff-result.png
+          return_code=$?
         fi
         echo "IMAGE_DIFF_STATUS=$return_code" >> $GITHUB_ENV
       shell: bash
@@ -174,10 +176,12 @@ runs:
       run: |
         convert -append /tmp/diff-test-pdf-pr /tmp/diff-test-pdf-pr.png
         convert -append "${{ inputs.file-to-pdf-diff }}" /tmp/diff-test-pdf-target.png
-        compare /tmp/diff-test-pdf-pr.png /tmp/diff-test-pdf-target.png -subimage-search -dissimilarity-threshold 1 /tmp/diff-result-pdf.png || return_code=$?
+        compare /tmp/diff-test-pdf-pr.png /tmp/diff-test-pdf-target.png -subimage-search -dissimilarity-threshold 1 /tmp/diff-result-pdf.png
+        return_code=$?
         # imagemagick requires first image to be larger. Just try both!
         if [ "${return_code}" -eq 2 ]; then
-          compare /tmp/diff-test-pdf-target.png /tmp/diff-test-pdf-pr.png -subimage-search -dissimilarity-threshold 1 /tmp/diff-result-pdf.png || return_code=$?
+          compare /tmp/diff-test-pdf-target.png /tmp/diff-test-pdf-pr.png -subimage-search -dissimilarity-threshold 1 /tmp/diff-result-pdf.png
+          return_code=$?
         fi
         echo "PDF_DIFF_STATUS=$return_code" >> $GITHUB_ENV
       shell: bash
